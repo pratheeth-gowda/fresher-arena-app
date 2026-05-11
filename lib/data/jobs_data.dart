@@ -2,7 +2,7 @@ import '../models/job.dart';
 
 const jobs = [
   Job(
-    id: 1,
+    id: '1',
     role: 'Software Engineer Trainee',
     company: 'Swiggy',
     location: 'Bangalore',
@@ -12,7 +12,7 @@ const jobs = [
         'Work with the engineering team to build and improve real-world food delivery features.',
   ),
   Job(
-    id: 2,
+    id: '2',
     role: 'Data Analyst Intern',
     company: 'Meesho',
     location: 'Bangalore',
@@ -22,7 +22,7 @@ const jobs = [
         'Analyze business data, prepare reports, and support decision-making using data insights.',
   ),
   Job(
-    id: 3,
+    id: '3',
     role: 'Frontend Developer',
     company: 'CRED',
     location: 'Bangalore',
@@ -32,7 +32,7 @@ const jobs = [
         'Create clean and responsive user interfaces for modern fintech applications.',
   ),
   Job(
-    id: 4,
+    id: '4',
     role: 'Operations Analyst',
     company: 'Zepto',
     location: 'Mumbai',

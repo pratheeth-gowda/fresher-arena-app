@@ -5,32 +5,70 @@ import 'home_page.dart';
 import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final VoidCallback toggleTheme;
+  final bool isDarkMode;
+
+  const LoginPage({
+    super.key,
+    required this.toggleTheme,
+    required this.isDarkMode,
+  });
 
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends State<LoginPage>
+    with SingleTickerProviderStateMixin {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
-  bool isLoading = false;
+  bool loading = false;
+
+  late AnimationController _controller;
+  late Animation<double> floatingAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat(reverse: true);
+
+    floatingAnimation = Tween<double>(
+      begin: -10,
+      end: 10,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> login() async {
-    if (emailController.text.isEmpty ||
-        passwordController.text.isEmpty) {
+    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter email and password')),
       );
       return;
     }
 
-    try {
-      setState(() {
-        isLoading = true;
-      });
+    setState(() {
+      loading = true;
+    });
 
+    try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
@@ -40,53 +78,51 @@ class _LoginPageState extends State<LoginPage> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
-      );
-    } on FirebaseAuthException catch (e) {
-      String message = 'Login failed';
-
-      if (e.code == 'user-not-found') {
-        message = 'No user found with this email';
-      } else if (e.code == 'wrong-password') {
-        message = 'Incorrect password';
-      } else if (e.code == 'invalid-email') {
-        message = 'Invalid email address';
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
+        MaterialPageRoute(
+          builder: (context) => HomePage(
+            toggleTheme: widget.toggleTheme,
+            isDarkMode: widget.isDarkMode,
+          ),
+        ),
       );
     } catch (e) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text(e.toString())),
       );
-    } finally {
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
-      }
+    }
+
+    if (mounted) {
+      setState(() {
+        loading = false;
+      });
     }
   }
 
-  Widget buildInput(
-    TextEditingController controller,
-    String label,
-    IconData icon,
-    bool isPassword,
-  ) {
+  Widget inputBox({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    bool obscure = false,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return TextField(
       controller: controller,
-      obscureText: isPassword,
-      style: const TextStyle(color: Colors.white),
+      obscureText: obscure,
+      style: TextStyle(
+        color: isDark ? Colors.white : Colors.black,
+      ),
       decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.grey),
-        prefixIcon: Icon(icon, color: const Color(0xFF38BDF8)),
+        hintText: hint,
+        hintStyle: const TextStyle(color: Colors.grey),
+        prefixIcon: Icon(icon, color: Colors.grey),
         filled: true,
-        fillColor: const Color(0xFF0A1628),
+        fillColor: isDark ? const Color(0xFF0F0F0F) : Colors.grey.shade100,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide.none,
         ),
       ),
     );
@@ -94,87 +130,135 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF020817),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Center(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const Text(
-                  'FresherArena',
-                  style: TextStyle(
-                    color: Color(0xFF38BDF8),
-                    fontSize: 34,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                const Text(
-                  'Login to find your first job',
-                  style: TextStyle(color: Colors.grey),
-                ),
-
-                const SizedBox(height: 40),
-
-                buildInput(
-                  emailController,
-                  'Email',
-                  Icons.email,
-                  false,
-                ),
-
-                const SizedBox(height: 16),
-
-                buildInput(
-                  passwordController,
-                  'Password',
-                  Icons.lock,
-                  true,
-                ),
-
-                const SizedBox(height: 24),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: isLoading ? null : login,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF38BDF8),
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.all(14),
+      backgroundColor:
+          isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF5F5F5),
+      body: Center(
+        child: Stack(
+          children: [
+            AnimatedBuilder(
+              animation: floatingAnimation,
+              builder: (context, child) {
+                return Positioned(
+                  left: floatingAnimation.value,
+                  top: 50,
+                  child: Container(
+                    width: 220,
+                    height: 220,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isDark ? Colors.white10 : Colors.black12,
+                      boxShadow: [
+                        BoxShadow(
+                          color: isDark ? Colors.white24 : Colors.black12,
+                          blurRadius: 100,
+                          spreadRadius: 30,
+                        ),
+                      ],
                     ),
-                    child: isLoading
-                        ? const CircularProgressIndicator(color: Colors.black)
-                        : const Text(
-                            'Login',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
                   ),
-                ),
-
-                const SizedBox(height: 16),
-
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const RegisterPage(),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    "Don't have an account? Register",
-                    style: TextStyle(color: Color(0xFF38BDF8)),
-                  ),
-                ),
-              ],
+                );
+              },
             ),
-          ),
+            Container(
+              width: 430,
+              padding: const EdgeInsets.all(34),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF171717) : Colors.white,
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: isDark ? Colors.white10 : Colors.black12,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark ? Colors.white10 : Colors.black12,
+                    blurRadius: 40,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'LOGIN',
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black,
+                          fontSize: 34,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: widget.toggleTheme,
+                        icon: Icon(
+                          widget.isDarkMode
+                              ? Icons.light_mode
+                              : Icons.dark_mode,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 30),
+                  inputBox(
+                    controller: emailController,
+                    hint: 'Email',
+                    icon: Icons.mail_outline,
+                  ),
+                  const SizedBox(height: 20),
+                  inputBox(
+                    controller: passwordController,
+                    hint: 'Password',
+                    icon: Icons.lock_outline,
+                    obscure: true,
+                  ),
+                  const SizedBox(height: 28),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: loading ? null : login,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark ? Colors.white : Colors.black,
+                        foregroundColor: isDark ? Colors.black : Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
+                      child: loading
+                          ? const CircularProgressIndicator()
+                          : const Text(
+                              'Login',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RegisterPage(
+                            toggleTheme: widget.toggleTheme,
+                            isDarkMode: widget.isDarkMode,
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Create Account',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
