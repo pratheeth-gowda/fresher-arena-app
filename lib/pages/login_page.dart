@@ -24,6 +24,7 @@ class _LoginPageState extends State<LoginPage>
   final passwordController = TextEditingController();
 
   bool loading = false;
+  bool showPassword = false;
 
   late AnimationController _controller;
   late Animation<double> floatingAnimation;
@@ -56,11 +57,30 @@ class _LoginPageState extends State<LoginPage>
     super.dispose();
   }
 
+  bool isValidEmail(String email) {
+    return email.contains('@') && email.contains('.');
+  }
+
+  void showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   Future<void> login() async {
-    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter email and password')),
-      );
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      showMessage('Please enter email and password.');
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      showMessage('Please enter a valid email with @ symbol.');
       return;
     }
 
@@ -70,8 +90,8 @@ class _LoginPageState extends State<LoginPage>
 
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
+        email: email,
+        password: password,
       );
 
       if (!mounted) return;
@@ -86,11 +106,7 @@ class _LoginPageState extends State<LoginPage>
         ),
       );
     } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      showMessage('Login failed. Please check email and password.');
     }
 
     if (mounted) {
@@ -105,6 +121,7 @@ class _LoginPageState extends State<LoginPage>
     required String hint,
     required IconData icon,
     bool obscure = false,
+    Widget? suffixIcon,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -118,6 +135,7 @@ class _LoginPageState extends State<LoginPage>
         hintText: hint,
         hintStyle: const TextStyle(color: Colors.grey),
         prefixIcon: Icon(icon, color: Colors.grey),
+        suffixIcon: suffixIcon,
         filled: true,
         fillColor: isDark ? const Color(0xFF0F0F0F) : Colors.grey.shade100,
         border: OutlineInputBorder(
@@ -214,7 +232,20 @@ class _LoginPageState extends State<LoginPage>
                     controller: passwordController,
                     hint: 'Password',
                     icon: Icons.lock_outline,
-                    obscure: true,
+                    obscure: !showPassword,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        showPassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          showPassword = !showPassword;
+                        });
+                      },
+                    ),
                   ),
                   const SizedBox(height: 28),
                   SizedBox(
